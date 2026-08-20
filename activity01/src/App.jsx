@@ -4,18 +4,20 @@ import "./App.css";
 function App() {
   const [page, setPage] = useState("register");
 
-  // Registration states
+  // Registration
   const [registerUsername, setRegisterUsername] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerMessage, setRegisterMessage] = useState("");
   const [registerError, setRegisterError] = useState("");
 
-  // Login states
+  // Login
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [loginMessage, setLoginMessage] = useState("");
   const [loginError, setLoginError] = useState("");
+
+  // Logged-in user
+  const [user, setUser] = useState(null);
 
   const handleRegister = async (event) => {
     event.preventDefault();
@@ -51,9 +53,7 @@ function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        setRegisterError(
-          data.message || "Registration failed."
-        );
+        setRegisterError(data.message || "Registration failed.");
         return;
       }
 
@@ -76,7 +76,6 @@ function App() {
   const handleLogin = async (event) => {
     event.preventDefault();
 
-    setLoginMessage("");
     setLoginError("");
 
     if (!loginEmail.trim() || !loginPassword.trim()) {
@@ -102,17 +101,18 @@ function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        setLoginError(
-          data.message || "Login failed."
-        );
+        setLoginError(data.message || "Login failed.");
         return;
       }
 
-      setLoginMessage(
-        data.message || "Login successful."
-      );
+      setUser({
+        id: data.id,
+        username: data.username,
+        email: data.email,
+      });
 
       setLoginPassword("");
+      setPage("dashboard");
     } catch (error) {
       console.error("Login error:", error);
 
@@ -122,19 +122,66 @@ function App() {
     }
   };
 
+  const handleLogout = () => {
+    setUser(null);
+    setLoginEmail("");
+    setLoginPassword("");
+    setLoginError("");
+    setPage("login");
+  };
+
   const showRegister = () => {
     setPage("register");
-
-    setLoginMessage("");
     setLoginError("");
   };
 
   const showLogin = () => {
     setPage("login");
-
     setRegisterMessage("");
     setRegisterError("");
   };
+
+  if (page === "dashboard") {
+    return (
+      <div className="page">
+        <div className="dashboard-card">
+          <h1>Dashboard</h1>
+
+          <p className="subtitle">
+            You have successfully logged in.
+          </p>
+
+          <div className="user-info">
+            <div className="user-row">
+              <span className="user-label">Username</span>
+              <span className="user-value">
+                {user?.username}
+              </span>
+            </div>
+
+            <div className="user-row">
+              <span className="user-label">Email</span>
+              <span className="user-value">
+                {user?.email}
+              </span>
+            </div>
+          </div>
+
+          <div className="message success">
+            Login successful.
+          </div>
+
+          <button
+            type="button"
+            className="logout-button"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (page === "login") {
     return (
@@ -182,12 +229,6 @@ function App() {
             {loginError && (
               <div className="message error">
                 {loginError}
-              </div>
-            )}
-
-            {loginMessage && (
-              <div className="message success">
-                {loginMessage}
               </div>
             )}
 
