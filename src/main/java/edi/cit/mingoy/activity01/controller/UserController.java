@@ -12,6 +12,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(originPatterns = "http://localhost:*")
 public class UserController {
 
     private final UserRepository userRepository;
@@ -27,35 +28,58 @@ public class UserController {
     public ResponseEntity<?> register(@RequestBody User user) {
 
         if (user.getUsername() == null ||
+                user.getUsername().trim().isEmpty() ||
                 user.getEmail() == null ||
-                user.getPassword() == null) {
+                user.getEmail().trim().isEmpty() ||
+                user.getPassword() == null ||
+                user.getPassword().trim().isEmpty()) {
 
             return ResponseEntity.badRequest().body(
-                    Map.of("message", "Username, email and password are required")
+                    Map.of(
+                            "message",
+                            "Username, email and password are required"
+                    )
             );
         }
 
         if (userRepository.existsByEmail(user.getEmail())) {
             return ResponseEntity.badRequest().body(
-                    Map.of("message", "Email already exists")
+                    Map.of(
+                            "message",
+                            "Email already exists"
+                    )
             );
         }
 
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setPassword(
+                passwordEncoder.encode(user.getPassword())
+        );
 
         User savedUser = userRepository.save(user);
 
-        return ResponseEntity.ok(savedUser);
+        return ResponseEntity.ok(
+                Map.of(
+                        "message", "Registration successful",
+                        "id", savedUser.getId(),
+                        "username", savedUser.getUsername(),
+                        "email", savedUser.getEmail()
+                )
+        );
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User loginRequest) {
 
         if (loginRequest.getEmail() == null ||
-                loginRequest.getPassword() == null) {
+                loginRequest.getEmail().trim().isEmpty() ||
+                loginRequest.getPassword() == null ||
+                loginRequest.getPassword().trim().isEmpty()) {
 
             return ResponseEntity.badRequest().body(
-                    Map.of("message", "Email and password are required")
+                    Map.of(
+                            "message",
+                            "Email and password are required"
+                    )
             );
         }
 
@@ -64,7 +88,10 @@ public class UserController {
 
         if (userOptional.isEmpty()) {
             return ResponseEntity.status(401).body(
-                    Map.of("message", "Invalid email or password")
+                    Map.of(
+                            "message",
+                            "Invalid email or password"
+                    )
             );
         }
 
@@ -75,7 +102,10 @@ public class UserController {
                 user.getPassword())) {
 
             return ResponseEntity.status(401).body(
-                    Map.of("message", "Invalid email or password")
+                    Map.of(
+                            "message",
+                            "Invalid email or password"
+                    )
             );
         }
 
@@ -92,14 +122,26 @@ public class UserController {
     @GetMapping("/user/{id}")
     public ResponseEntity<?> getUser(@PathVariable Long id) {
 
-        Optional<User> userOptional = userRepository.findById(id);
+        Optional<User> userOptional =
+                userRepository.findById(id);
 
         if (userOptional.isEmpty()) {
             return ResponseEntity.status(404).body(
-                    Map.of("message", "User not found")
+                    Map.of(
+                            "message",
+                            "User not found"
+                    )
             );
         }
 
-        return ResponseEntity.ok(userOptional.get());
+        User user = userOptional.get();
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "id", user.getId(),
+                        "username", user.getUsername(),
+                        "email", user.getEmail()
+                )
+        );
     }
 }
