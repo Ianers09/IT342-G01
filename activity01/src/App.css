@@ -70,7 +70,7 @@ input {
   border-color: #111827;
 }
 
-button {
+form > button {
   width: 100%;
   border: none;
   border-radius: 8px;
@@ -81,7 +81,7 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+form > button:hover {
   background: #000000;
 }
 
@@ -110,7 +110,16 @@ button:hover {
   font-size: 14px;
 }
 
-.link-text {
+.text-button {
+  width: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: #111827;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.text-button:hover {
+  text-decoration: underline;
 }

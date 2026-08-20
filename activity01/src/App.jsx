@@ -2,21 +2,30 @@ import { useState } from "react";
 import "./App.css";
 
 function App() {
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [page, setPage] = useState("register");
 
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [registerUsername, setRegisterUsername] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerMessage, setRegisterMessage] = useState("");
+  const [registerError, setRegisterError] = useState("");
+
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
 
   const handleRegister = async (event) => {
     event.preventDefault();
 
-    setMessage("");
-    setError("");
+    setRegisterMessage("");
+    setRegisterError("");
 
-    if (!username.trim() || !email.trim() || !password.trim()) {
-      setError("All fields are required.");
+    if (
+      !registerUsername.trim() ||
+      !registerEmail.trim() ||
+      !registerPassword.trim()
+    ) {
+      setRegisterError("All fields are required.");
       return;
     }
 
@@ -29,9 +38,9 @@ function App() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            username: username,
-            email: email,
-            password: password,
+            username: registerUsername,
+            email: registerEmail,
+            password: registerPassword,
           }),
         }
       );
@@ -39,23 +48,123 @@ function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.message || "Registration failed.");
+        setRegisterError(data.message || "Registration failed.");
         return;
       }
 
-      setMessage(data.message || "Registration successful.");
+      setRegisterMessage(
+        data.message || "Registration successful."
+      );
 
-      setUsername("");
-      setEmail("");
-      setPassword("");
+      setRegisterUsername("");
+      setRegisterEmail("");
+      setRegisterPassword("");
     } catch (error) {
       console.error("Registration error:", error);
 
-      setError(
+      setRegisterError(
         "Unable to connect to the Spring Boot server. Make sure the backend is running."
       );
     }
   };
+
+  const handleLogin = (event) => {
+    event.preventDefault();
+
+    setLoginError("");
+
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      setLoginError("Email and password are required.");
+      return;
+    }
+
+    /*
+      API integration for login will be added
+      in the separate API Integration commit.
+    */
+
+    setLoginError("");
+  };
+
+  const showRegister = () => {
+    setPage("register");
+    setLoginError("");
+  };
+
+  const showLogin = () => {
+    setPage("login");
+    setRegisterMessage("");
+    setRegisterError("");
+  };
+
+  if (page === "login") {
+    return (
+      <div className="page">
+        <div className="auth-card">
+          <h1>Login</h1>
+
+          <p className="subtitle">
+            Sign in to your account to continue.
+          </p>
+
+          <form onSubmit={handleLogin}>
+            <div className="form-group">
+              <label htmlFor="loginEmail">
+                Email
+              </label>
+
+              <input
+                id="loginEmail"
+                type="email"
+                placeholder="Enter your email"
+                value={loginEmail}
+                onChange={(event) =>
+                  setLoginEmail(event.target.value)
+                }
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="loginPassword">
+                Password
+              </label>
+
+              <input
+                id="loginPassword"
+                type="password"
+                placeholder="Enter your password"
+                value={loginPassword}
+                onChange={(event) =>
+                  setLoginPassword(event.target.value)
+                }
+              />
+            </div>
+
+            {loginError && (
+              <div className="message error">
+                {loginError}
+              </div>
+            )}
+
+            <button type="submit">
+              Login
+            </button>
+          </form>
+
+          <p className="footer-text">
+            Don't have an account?{" "}
+            <button
+              type="button"
+              className="text-button"
+              onClick={showRegister}
+            >
+              Register
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -68,62 +177,62 @@ function App() {
 
         <form onSubmit={handleRegister}>
           <div className="form-group">
-            <label htmlFor="username">
+            <label htmlFor="registerUsername">
               Username
             </label>
 
             <input
-              id="username"
+              id="registerUsername"
               type="text"
               placeholder="Enter your username"
-              value={username}
+              value={registerUsername}
               onChange={(event) =>
-                setUsername(event.target.value)
+                setRegisterUsername(event.target.value)
               }
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">
+            <label htmlFor="registerEmail">
               Email
             </label>
 
             <input
-              id="email"
+              id="registerEmail"
               type="email"
               placeholder="Enter your email"
-              value={email}
+              value={registerEmail}
               onChange={(event) =>
-                setEmail(event.target.value)
+                setRegisterEmail(event.target.value)
               }
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">
+            <label htmlFor="registerPassword">
               Password
             </label>
 
             <input
-              id="password"
+              id="registerPassword"
               type="password"
               placeholder="Enter your password"
-              value={password}
+              value={registerPassword}
               onChange={(event) =>
-                setPassword(event.target.value)
+                setRegisterPassword(event.target.value)
               }
             />
           </div>
 
-          {error && (
+          {registerError && (
             <div className="message error">
-              {error}
+              {registerError}
             </div>
           )}
 
-          {message && (
+          {registerMessage && (
             <div className="message success">
-              {message}
+              {registerMessage}
             </div>
           )}
 
@@ -134,9 +243,13 @@ function App() {
 
         <p className="footer-text">
           Already have an account?{" "}
-          <span className="link-text">
+          <button
+            type="button"
+            className="text-button"
+            onClick={showLogin}
+          >
             Login
-          </span>
+          </button>
         </p>
       </div>
     </div>
