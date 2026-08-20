@@ -4,14 +4,17 @@ import "./App.css";
 function App() {
   const [page, setPage] = useState("register");
 
+  // Registration states
   const [registerUsername, setRegisterUsername] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerMessage, setRegisterMessage] = useState("");
   const [registerError, setRegisterError] = useState("");
 
+  // Login states
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [loginMessage, setLoginMessage] = useState("");
   const [loginError, setLoginError] = useState("");
 
   const handleRegister = async (event) => {
@@ -48,7 +51,9 @@ function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        setRegisterError(data.message || "Registration failed.");
+        setRegisterError(
+          data.message || "Registration failed."
+        );
         return;
       }
 
@@ -68,9 +73,10 @@ function App() {
     }
   };
 
-  const handleLogin = (event) => {
+  const handleLogin = async (event) => {
     event.preventDefault();
 
+    setLoginMessage("");
     setLoginError("");
 
     if (!loginEmail.trim() || !loginPassword.trim()) {
@@ -78,21 +84,54 @@ function App() {
       return;
     }
 
-    /*
-      API integration for login will be added
-      in the separate API Integration commit.
-    */
+    try {
+      const response = await fetch(
+        "http://localhost:8081/api/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: loginEmail,
+            password: loginPassword,
+          }),
+        }
+      );
 
-    setLoginError("");
+      const data = await response.json();
+
+      if (!response.ok) {
+        setLoginError(
+          data.message || "Login failed."
+        );
+        return;
+      }
+
+      setLoginMessage(
+        data.message || "Login successful."
+      );
+
+      setLoginPassword("");
+    } catch (error) {
+      console.error("Login error:", error);
+
+      setLoginError(
+        "Unable to connect to the Spring Boot server. Make sure the backend is running."
+      );
+    }
   };
 
   const showRegister = () => {
     setPage("register");
+
+    setLoginMessage("");
     setLoginError("");
   };
 
   const showLogin = () => {
     setPage("login");
+
     setRegisterMessage("");
     setRegisterError("");
   };
@@ -143,6 +182,12 @@ function App() {
             {loginError && (
               <div className="message error">
                 {loginError}
+              </div>
+            )}
+
+            {loginMessage && (
+              <div className="message success">
+                {loginMessage}
               </div>
             )}
 
