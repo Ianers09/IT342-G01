@@ -1,4 +1,4 @@
-package edi.cit.mingoy.activity01;
+package edu.cit.mingoy.activity01;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

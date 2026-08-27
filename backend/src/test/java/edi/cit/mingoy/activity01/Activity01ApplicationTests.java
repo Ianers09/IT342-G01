@@ -1,4 +1,4 @@
-package edi.cit.mingoy.activity01;
+package edu.cit.mingoy.activity01;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -11,3 +11,4 @@ class Activity01ApplicationTests {
 	}
 
 }
+

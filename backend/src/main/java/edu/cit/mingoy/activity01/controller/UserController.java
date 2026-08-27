@@ -1,7 +1,7 @@
-package edi.cit.mingoy.activity01.controller;
+package edu.cit.mingoy.activity01.controller;
 
-import edi.cit.mingoy.activity01.model.User;
-import edi.cit.mingoy.activity01.repository.UserRepository;
+import edu.cit.mingoy.activity01.model.User;
+import edu.cit.mingoy.activity01.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;

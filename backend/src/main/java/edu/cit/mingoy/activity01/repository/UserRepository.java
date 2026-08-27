@@ -1,6 +1,6 @@
-package edi.cit.mingoy.activity01.repository;
+package edu.cit.mingoy.activity01.repository;
 
-import edi.cit.mingoy.activity01.model.User;
+import edu.cit.mingoy.activity01.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

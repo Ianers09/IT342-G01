@@ -1,4 +1,4 @@
-package edi.cit.mingoy.activity01.model;
+package edu.cit.mingoy.activity01.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
