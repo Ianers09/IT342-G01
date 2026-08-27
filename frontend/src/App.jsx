@@ -409,6 +409,10 @@ function App() {
     setRequestMessage("");
     setRequestError("");
 
+    setTestRequestId("");
+    setTestResult("");
+    setTestError("");
+
     setPage("login");
   };
 
