@@ -1,8 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
+const API_URL = "http://localhost:8081";
+
 function App() {
-  const [page, setPage] = useState("register");
+  const savedToken = sessionStorage.getItem("token");
+  const savedUser = sessionStorage.getItem("user");
+
+  const [page, setPage] = useState(
+    savedToken && savedUser ? "requests" : "register"
+  );
+
+  const [token, setToken] = useState(savedToken || "");
+  const [user, setUser] = useState(
+    savedUser ? JSON.parse(savedUser) : null
+  );
 
   // Registration
   const [registerUsername, setRegisterUsername] = useState("");
@@ -16,8 +28,27 @@ function App() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
 
-  // Logged-in user
-  const [user, setUser] = useState(null);
+  // Service Requests
+  const [requests, setRequests] = useState([]);
+  const [requestTitle, setRequestTitle] = useState("");
+  const [requestDescription, setRequestDescription] = useState("");
+  const [requestCategory, setRequestCategory] = useState("General");
+
+  const [editingId, setEditingId] = useState(null);
+
+  const [requestMessage, setRequestMessage] = useState("");
+  const [requestError, setRequestError] = useState("");
+
+  // Ownership testing
+  const [testRequestId, setTestRequestId] = useState("");
+  const [testResult, setTestResult] = useState("");
+  const [testError, setTestError] = useState("");
+
+  useEffect(() => {
+    if (page === "requests" && token) {
+      loadRequests();
+    }
+  }, [page, token]);
 
   const handleRegister = async (event) => {
     event.preventDefault();
@@ -35,25 +66,24 @@ function App() {
     }
 
     try {
-      const response = await fetch(
-        "http://localhost:8081/api/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            username: registerUsername,
-            email: registerEmail,
-            password: registerPassword,
-          }),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: registerUsername,
+          email: registerEmail,
+          password: registerPassword,
+        }),
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setRegisterError(data.message || "Registration failed.");
+        setRegisterError(
+          data.message || "Registration failed."
+        );
         return;
       }
 
@@ -65,10 +95,10 @@ function App() {
       setRegisterEmail("");
       setRegisterPassword("");
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error(error);
 
       setRegisterError(
-        "Unable to connect to the Spring Boot server. Make sure the backend is running."
+        "Unable to connect to the Spring Boot server."
       );
     }
   };
@@ -84,105 +114,582 @@ function App() {
     }
 
     try {
+      const response = await fetch(`${API_URL}/api/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: loginEmail,
+          password: loginPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setLoginError(
+          data.message || "Login failed."
+        );
+        return;
+      }
+
+      if (!data.token) {
+        setLoginError(
+          "Login succeeded but no JWT was returned by the backend."
+        );
+        return;
+      }
+
+      const loggedInUser = {
+        id: data.id,
+        username: data.username,
+        email: data.email,
+      };
+
+      setToken(data.token);
+      setUser(loggedInUser);
+
+      sessionStorage.setItem("token", data.token);
+      sessionStorage.setItem(
+        "user",
+        JSON.stringify(loggedInUser)
+      );
+
+      setLoginPassword("");
+      setPage("requests");
+    } catch (error) {
+      console.error(error);
+
+      setLoginError(
+        "Unable to connect to the Spring Boot server."
+      );
+    }
+  };
+
+  const loadRequests = async () => {
+    if (!token) {
+      handleLogout();
+      return;
+    }
+
+    setRequestError("");
+
+    try {
       const response = await fetch(
-        "http://localhost:8081/api/login",
+        `${API_URL}/api/requests`,
         {
-          method: "POST",
+          method: "GET",
           headers: {
-            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            email: loginEmail,
-            password: loginPassword,
-          }),
+        }
+      );
+
+      if (response.status === 401 || response.status === 403) {
+        handleLogout();
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setRequestError(
+          data.message || "Unable to load service requests."
+        );
+        return;
+      }
+
+      setRequests(data);
+    } catch (error) {
+      console.error(error);
+
+      setRequestError(
+        "Unable to connect to the Service Request API."
+      );
+    }
+  };
+
+  const handleRequestSubmit = async (event) => {
+    event.preventDefault();
+
+    setRequestMessage("");
+    setRequestError("");
+
+    if (
+      !requestTitle.trim() ||
+      !requestDescription.trim() ||
+      !requestCategory.trim()
+    ) {
+      setRequestError(
+        "Title, description and category are required."
+      );
+      return;
+    }
+
+    const requestBody = {
+      title: requestTitle,
+      description: requestDescription,
+      category: requestCategory,
+    };
+
+    try {
+      const url = editingId
+        ? `${API_URL}/api/requests/${editingId}`
+        : `${API_URL}/api/requests`;
+
+      const method = editingId ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setRequestError(
+          data.message || "Operation failed."
+        );
+        return;
+      }
+
+      setRequestMessage(
+        data.message ||
+          (editingId
+            ? "Service request updated successfully."
+            : "Service request created successfully.")
+      );
+
+      clearRequestForm();
+      await loadRequests();
+    } catch (error) {
+      console.error(error);
+
+      setRequestError(
+        "Unable to connect to the Service Request API."
+      );
+    }
+  };
+
+  const handleEdit = (request) => {
+    setEditingId(request.id);
+    setRequestTitle(request.title);
+    setRequestDescription(request.description);
+    setRequestCategory(request.category);
+
+    setRequestMessage("");
+    setRequestError("");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  const handleDelete = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this service request?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setRequestMessage("");
+    setRequestError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/requests/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        setLoginError(data.message || "Login failed.");
+        setRequestError(
+          data.message || "Delete failed."
+        );
         return;
       }
 
-      setUser({
-        id: data.id,
-        username: data.username,
-        email: data.email,
-      });
+      setRequestMessage(
+        data.message ||
+          "Service request deleted successfully."
+      );
 
-      setLoginPassword("");
-      setPage("dashboard");
+      if (editingId === id) {
+        clearRequestForm();
+      }
+
+      await loadRequests();
     } catch (error) {
-      console.error("Login error:", error);
+      console.error(error);
 
-      setLoginError(
-        "Unable to connect to the Spring Boot server. Make sure the backend is running."
+      setRequestError(
+        "Unable to connect to the Service Request API."
       );
     }
   };
 
+  const testRequestAccess = async () => {
+    setTestResult("");
+    setTestError("");
+
+    if (!testRequestId.trim()) {
+      setTestError("Enter a Service Request ID.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/requests/${testRequestId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setTestError(
+          `${response.status} ${response.statusText}: ${
+            data.message || "Access denied"
+          }`
+        );
+        return;
+      }
+
+      setTestResult(
+        `Access allowed: Request #${data.id} - ${data.title}`
+      );
+    } catch (error) {
+      console.error(error);
+
+      setTestError(
+        "Unable to connect to the Service Request API."
+      );
+    }
+  };
+
+  const clearRequestForm = () => {
+    setEditingId(null);
+    setRequestTitle("");
+    setRequestDescription("");
+    setRequestCategory("General");
+  };
+
   const handleLogout = () => {
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+
+    setToken("");
     setUser(null);
+    setRequests([]);
+
     setLoginEmail("");
     setLoginPassword("");
     setLoginError("");
+
+    clearRequestForm();
+
+    setRequestMessage("");
+    setRequestError("");
+
     setPage("login");
   };
 
   const showRegister = () => {
     setPage("register");
-    setLoginError("");
-  };
 
-  const showLogin = () => {
-    setPage("login");
+    setLoginError("");
     setRegisterMessage("");
     setRegisterError("");
   };
 
-  if (page === "dashboard") {
+  const showLogin = () => {
+    setPage("login");
+
+    setRegisterMessage("");
+    setRegisterError("");
+    setLoginError("");
+  };
+
+  // Protected page
+  if (page === "requests") {
+    if (!token || !user) {
+      return null;
+    }
+
     return (
-      <div className="page">
-        <div className="dashboard-card">
-          <h1>Dashboard</h1>
-
-          <p className="subtitle">
-            You have successfully logged in.
-          </p>
-
-          <div className="user-info">
-            <div className="user-row">
-              <span className="user-label">Username</span>
-              <span className="user-value">
-                {user?.username}
-              </span>
+      <div className="requests-page">
+        <div className="requests-container">
+          <header className="requests-header">
+            <div>
+              <h1>My Service Requests</h1>
+              <p>
+                Logged in as{" "}
+                <strong>{user.username}</strong> ({user.email})
+              </p>
             </div>
 
-            <div className="user-row">
-              <span className="user-label">Email</span>
-              <span className="user-value">
-                {user?.email}
-              </span>
+            <button
+              type="button"
+              className="logout-button header-logout"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+          </header>
+
+          <section className="request-form-card">
+            <h2>
+              {editingId
+                ? `Edit Request #${editingId}`
+                : "Create Service Request"}
+            </h2>
+
+            <form onSubmit={handleRequestSubmit}>
+              <div className="form-group">
+                <label htmlFor="requestTitle">
+                  Title
+                </label>
+
+                <input
+                  id="requestTitle"
+                  type="text"
+                  placeholder="Enter request title"
+                  value={requestTitle}
+                  onChange={(event) =>
+                    setRequestTitle(event.target.value)
+                  }
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="requestDescription">
+                  Description
+                </label>
+
+                <textarea
+                  id="requestDescription"
+                  placeholder="Describe your service request"
+                  value={requestDescription}
+                  onChange={(event) =>
+                    setRequestDescription(
+                      event.target.value
+                    )
+                  }
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="requestCategory">
+                  Category
+                </label>
+
+                <select
+                  id="requestCategory"
+                  value={requestCategory}
+                  onChange={(event) =>
+                    setRequestCategory(
+                      event.target.value
+                    )
+                  }
+                >
+                  <option value="General">
+                    General
+                  </option>
+                  <option value="Technical">
+                    Technical
+                  </option>
+                  <option value="Maintenance">
+                    Maintenance
+                  </option>
+                  <option value="Billing">
+                    Billing
+                  </option>
+                  <option value="Other">
+                    Other
+                  </option>
+                </select>
+              </div>
+
+              {requestError && (
+                <div className="message error">
+                  {requestError}
+                </div>
+              )}
+
+              {requestMessage && (
+                <div className="message success">
+                  {requestMessage}
+                </div>
+              )}
+
+              <div className="form-actions">
+                <button type="submit">
+                  {editingId
+                    ? "Update Request"
+                    : "Create Request"}
+                </button>
+
+                {editingId && (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={clearRequestForm}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </section>
+
+          <section className="request-list-section">
+            <div className="section-heading">
+              <h2>Your Requests</h2>
+
+              <button
+                type="button"
+                className="refresh-button"
+                onClick={loadRequests}
+              >
+                Refresh
+              </button>
             </div>
-          </div>
 
-          <div className="message success">
-            Login successful.
-          </div>
+            {requests.length === 0 ? (
+              <div className="empty-state">
+                You do not have any service requests yet.
+              </div>
+            ) : (
+              <div className="request-grid">
+                {requests.map((request) => (
+                  <article
+                    className="request-card"
+                    key={request.id}
+                  >
+                    <div className="request-card-header">
+                      <div>
+                        <span className="request-id">
+                          Request #{request.id}
+                        </span>
 
-          <button
-            type="button"
-            className="logout-button"
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
+                        <h3>{request.title}</h3>
+                      </div>
+
+                      <span className="category-badge">
+                        {request.category}
+                      </span>
+                    </div>
+
+                    <p className="request-description">
+                      {request.description}
+                    </p>
+
+                    <div className="request-meta">
+                      <span>
+                        <strong>Created By:</strong>{" "}
+                        {request.createdBy}
+                      </span>
+
+                      <span>
+                        <strong>Date:</strong>{" "}
+                        {new Date(
+                          request.dateCreated
+                        ).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div className="request-actions">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleEdit(request)
+                        }
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        className="danger-button"
+                        onClick={() =>
+                          handleDelete(request.id)
+                        }
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="ownership-card">
+            <h2>Security / Ownership Test</h2>
+
+            <p>
+              Enter a Service Request ID to test whether
+              the currently authenticated account can
+              access it.
+            </p>
+
+            <div className="ownership-controls">
+              <input
+                type="number"
+                min="1"
+                placeholder="Request ID"
+                value={testRequestId}
+                onChange={(event) =>
+                  setTestRequestId(
+                    event.target.value
+                  )
+                }
+              />
+
+              <button
+                type="button"
+                onClick={testRequestAccess}
+              >
+                Test Access
+              </button>
+            </div>
+
+            {testResult && (
+              <div className="message success ownership-message">
+                {testResult}
+              </div>
+            )}
+
+            {testError && (
+              <div className="message error ownership-message">
+                {testError}
+              </div>
+            )}
+          </section>
         </div>
       </div>
     );
   }
 
+  // Login page
   if (page === "login") {
     return (
       <div className="page">
@@ -221,7 +728,9 @@ function App() {
                 placeholder="Enter your password"
                 value={loginPassword}
                 onChange={(event) =>
-                  setLoginPassword(event.target.value)
+                  setLoginPassword(
+                    event.target.value
+                  )
                 }
               />
             </div>
@@ -252,6 +761,7 @@ function App() {
     );
   }
 
+  // Registration page
   return (
     <div className="page">
       <div className="auth-card">
@@ -273,7 +783,9 @@ function App() {
               placeholder="Enter your username"
               value={registerUsername}
               onChange={(event) =>
-                setRegisterUsername(event.target.value)
+                setRegisterUsername(
+                  event.target.value
+                )
               }
             />
           </div>
@@ -289,7 +801,9 @@ function App() {
               placeholder="Enter your email"
               value={registerEmail}
               onChange={(event) =>
-                setRegisterEmail(event.target.value)
+                setRegisterEmail(
+                  event.target.value
+                )
               }
             />
           </div>
@@ -305,7 +819,9 @@ function App() {
               placeholder="Enter your password"
               value={registerPassword}
               onChange={(event) =>
-                setRegisterPassword(event.target.value)
+                setRegisterPassword(
+                  event.target.value
+                )
               }
             />
           </div>
